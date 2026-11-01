@@ -131,3 +131,31 @@ After configuring Supabase, serve the folder with a local web server (for exampl
 - Score rules are enforced in the database function and scoreboard view, not only in browser JavaScript.
 - Keep a copy/export of the event results during the festival. A free hosted project is convenient, but it is not a substitute for event-day backups.
 - Before the festival, test sign-in, result submission, correction, team scoring, photo upload, public display and logout with test accounts and test records.
+
+
+## Additional AROHA '26 features
+
+The current website also includes:
+- A countdown to the first scheduled event (5 November 2026, 9:00 AM IST).
+- A live championship race with animated department point bars and a 25-second public refresh.
+- A downloadable PDF achievement certificate on each published winner card.
+- An administrator-only Excel workbook export (department scores, winners, event schedule).
+- An administrator-only PDF festival results report.
+- An official championship finale that remains locked until an administrator reveals the verified winner.
+
+### One-time database migration for the championship finale
+
+After the main `schema.sql` has been run, open `supabase/add-festival-features.sql` and run the complete file in the Supabase SQL Editor. This creates the public-read / admin-update `festival_settings` row and stores the official champion snapshot. Without this migration, the rest of the site continues to work, but the official finale reveal control remains disabled.
+
+To reveal the final champion:
+1. Sign in to `admin.html` with an administrator account.
+2. Confirm that all results have been entered and verified.
+3. Use **Reveal Final Champion** in the Championship Finale card.
+4. The public finale will show the frozen champion name(s), points and medal tally. The reveal can be locked again by the administrator.
+
+### Reports and certificates
+- **Winner certificate:** Open the public Winners section and select **Download Certificate**. A PDF is generated in the browser.
+- **Excel report:** In Stage Control, administrator accounts can download an .xlsx workbook containing Department Scores, Winners and Event Schedule sheets.
+- **PDF report:** In Stage Control, administrator accounts can download a consolidated PDF results report.
+
+The PDF and Excel exports load jsPDF and SheetJS from their public CDNs; an internet connection is required when exporting.
