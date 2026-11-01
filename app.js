@@ -202,6 +202,27 @@
   }
 
 
+  function fitCertificateFont(ctx, text, maxWidth, family, maxSize, minSize) {
+    let size = maxSize;
+    while (size > minSize) {
+      ctx.font = `600 ${size}px ${family}`;
+      if (ctx.measureText(text).width <= maxWidth) break;
+      size -= 1;
+    }
+    return size;
+  }
+
+  async function loadCertificateBackground() {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error(
+        'Certificate background is missing. Please upload aroha-certificate-bg.webp to assets/images in the AROHA-26 repository.'
+      ));
+      image.src = 'assets/images/aroha-certificate-bg.webp?v=1';
+    });
+  }
+
   async function downloadWinnerCertificate(resultId, button) {
     const result = results.find(item => item.id === resultId);
     if (!result) return;
@@ -210,54 +231,85 @@
       toast('Certificate PDF library did not load. Please refresh and try again.');
       return;
     }
+
     const original = button.textContent;
-    button.disabled = true; button.textContent = 'PREPARING CERTIFICATE…';
+    button.disabled = true;
+    button.textContent = 'PREPARING CERTIFICATE…';
+
     try {
       const type = result.event?.competition_type || 'individual';
-      const person = type === 'group' ? (result.team_name || 'Winning team') : (result.winner_name || 'Winner');
+      const person = type === 'group'
+        ? (result.team_name || 'Winning team')
+        : (result.winner_name || 'Winner');
       const department = result.department?.name || result.department_code || 'Department';
       const eventName = result.event?.title || 'Competition';
       const placement = Number(result.placement);
-      const award = placeName(placement);
-      const points = awardPoints(type, placement);
-      const pdf = new JsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-      pdf.setFillColor(35, 9, 17); pdf.rect(0, 0, 297, 210, 'F');
-      pdf.setDrawColor(208, 171, 105); pdf.setLineWidth(0.8); pdf.rect(8, 8, 281, 194);
-      pdf.setDrawColor(151, 111, 62); pdf.setLineWidth(0.25); pdf.rect(12, 12, 273, 186);
-      pdf.setTextColor(233, 206, 145); pdf.setFont('times','bold'); pdf.setFontSize(15);
-      pdf.text('MGCSIILS CHERUVARAKONAM', 148.5, 29, {align:'center'});
-      pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(196, 166, 119);
-      pdf.text('THE ANNUAL ARTS FESTIVAL', 148.5, 36, {align:'center'});
-      pdf.setFont('times','bold'); pdf.setFontSize(37); pdf.setTextColor(244, 221, 176);
-      pdf.text("AROHA '26", 148.5, 57, {align:'center'});
-      pdf.setFont('helvetica','bold'); pdf.setFontSize(10); pdf.setTextColor(224, 190, 120);
-      pdf.text('CERTIFICATE OF ACHIEVEMENT', 148.5, 70, {align:'center'});
-      pdf.setDrawColor(191, 149, 82); pdf.line(70, 76, 227, 76);
-      pdf.setFont('times','italic'); pdf.setFontSize(14); pdf.setTextColor(244, 230, 204);
-      pdf.text('This certificate is proudly presented to', 148.5, 90, {align:'center'});
-      pdf.setFont('times','bold'); pdf.setFontSize(person.length > 28 ? 23 : person.length > 18 ? 27 : 32); pdf.setTextColor(249, 222, 167);
-      const nameLines = pdf.splitTextToSize(person, 230);
-      pdf.text(nameLines.slice(0,2), 148.5, 108, {align:'center'});
-      const nameBottom = 108 + (Math.min(nameLines.length,2)-1) * 11;
-      pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(228, 204, 165);
-      pdf.text(award, 148.5, nameBottom + 15, {align:'center'});
-      pdf.setFont('helvetica','normal'); pdf.setFontSize(10); pdf.setTextColor(235, 220, 196);
-      pdf.text(`For outstanding achievement in ${eventName}`, 148.5, nameBottom + 25, {align:'center',maxWidth:235});
-      pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(232, 199, 133);
-      pdf.text(`DEPARTMENT: ${department.toUpperCase()}`, 148.5, nameBottom + 38, {align:'center'});
-      pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(218, 190, 153);
-      pdf.text(`${points} POINTS · ${type.toUpperCase()} EVENT`, 148.5, nameBottom + 47, {align:'center'});
-      pdf.setDrawColor(151, 111, 62); pdf.line(30, 184, 91, 184); pdf.line(206, 184, 267, 184);
-      pdf.setFontSize(7); pdf.setTextColor(188, 161, 123);
-      pdf.text('ARTS CLUB', 60, 190, {align:'center'}); pdf.text('MGCSIILS CHERUVARAKONAM', 236, 190, {align:'center'});
+      const position = ({1:'1st', 2:'2nd', 3:'3rd'}[placement] || 'Winner');
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 1536;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Your browser could not prepare the certificate.');
+
+      const background = await loadCertificateBackground();
+      ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#4b1b0d';
+
+      // Participant / team name on the long blank line.
+      const nameSize = fitCertificateFont(
+        ctx, person, 730, "Georgia, 'Times New Roman', serif", 48, 24
+      );
+      ctx.font = `600 ${nameSize}px Georgia, 'Times New Roman', serif`;
+      ctx.fillText(person, 982, 666, 730);
+
+      // Department sits neatly beneath the name line.
+      const departmentText = `DEPARTMENT: ${department.toUpperCase()}`;
+      const deptSize = fitCertificateFont(
+        ctx, departmentText, 540, "Arial, sans-serif", 17, 12
+      );
+      ctx.font = `600 ${deptSize}px Arial, sans-serif`;
+      ctx.fillStyle = '#7a3b20';
+      ctx.fillText(departmentText, 982, 699, 540);
+
+      // Fill the two printed blanks in the achievement sentence.
+      const positionSize = fitCertificateFont(
+        ctx, position, 165, "Georgia, 'Times New Roman', serif", 23, 15
+      );
+      ctx.font = `600 ${positionSize}px Georgia, 'Times New Roman', serif`;
+      ctx.fillStyle = '#4b1b0d';
+      ctx.fillText(position, 758, 723, 165);
+
+      const eventSize = fitCertificateFont(
+        ctx, eventName, 400, "Georgia, 'Times New Roman', serif", 22, 11
+      );
+      ctx.font = `600 ${eventSize}px Georgia, 'Times New Roman', serif`;
+      ctx.fillText(eventName, 1168, 723, 400);
+
+      const backgroundData = canvas.toDataURL('image/jpeg', 0.96);
+      const pdf = new JsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, 297, 210, 'F');
+
+      // The source design is 3:2. Fit it inside A4 without cropping or distorting it.
+      pdf.addImage(backgroundData, 'JPEG', 0, 6, 297, 198, undefined, 'FAST');
+      pdf.setProperties({
+        title: `AROHA ’26 Certificate - ${person}`,
+        subject: `${position} position in ${eventName}`,
+        author: 'MGCSIILS, Cheruvarakonam'
+      });
+
       const safeName = person.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'winner';
       pdf.save(`aroha-26-${safeName}-certificate.pdf`);
-      toast('Winner certificate downloaded.');
+      toast('Personalized AROHA certificate downloaded.');
     } catch (error) {
       console.error('AROHA certificate:', error);
       toast(error.message || 'Could not create certificate.');
     } finally {
-      button.disabled = false; button.textContent = original;
+      button.disabled = false;
+      button.textContent = original;
     }
   }
 
