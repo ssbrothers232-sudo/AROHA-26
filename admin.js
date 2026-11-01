@@ -94,6 +94,7 @@
     populateSelects(); renderScoreboard(s.data || []); renderRecentResults();
     $('statResults').textContent = results.filter(x=>x.is_published !== false).length;
     $('statPhotos').textContent = g.data?.length || 0;
+    renderEventManager();
   }
   function renderScoreboard(scores) {
     const sorted = [...scores].sort((a,b)=>Number(b.points)-Number(a.points)||Number(b.gold)-Number(a.gold)||Number(b.silver)-Number(a.silver));
@@ -134,6 +135,84 @@
       toast('Result deleted and scores recalculated.');
     } catch (err) {
       notice('adminAlert', err.message || 'Could not delete this result.', 'error');
+    }
+  }
+
+  function renderEventManager() {
+    const host = $('eventManagerList');
+    if (!host) return;
+    const ordered = [...events].sort((a,b) => String(a.event_date || '9999-12-31').localeCompare(String(b.event_date || '9999-12-31')) || a.title.localeCompare(b.title));
+    host.innerHTML = ordered.length ? ordered.map(event => {
+      const linkedResults = results.filter(result => result.event_id === event.id).length;
+      const typeLabel = event.competition_type === 'group' ? 'GROUP · 10 / 7 / 2' : event.competition_type === 'individual' ? 'INDIVIDUAL · 5 / 3 / 1' : 'PROGRAMME · NO POINTS';
+      const dateLabel = event.event_date ? new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'DATE NOT SET';
+      return `<article class="event-manager-item">
+        <div class="event-manager-main">
+          <strong>${esc(event.title)}</strong>
+          <small>${esc(event.category)} · ${typeLabel} · ${dateLabel}</small>
+          <span>${esc(event.event_time || 'TIME TO BE CONFIRMED')} · ${esc(event.venue || 'VENUE TO BE CONFIRMED')} · ${linkedResults} result(s)</span>
+        </div>
+        <div class="event-manager-actions">
+          <button type="button" data-edit-event="${esc(event.id)}">EDIT</button>
+          <button type="button" class="delete-event" data-delete-event="${esc(event.id)}">DELETE</button>
+        </div>
+      </article>`;
+    }).join('') : '<p class="card-sub">No events have been added yet.</p>';
+    host.querySelectorAll('[data-edit-event]').forEach(button => button.addEventListener('click', () => loadEventForEdit(button.dataset.editEvent)));
+    host.querySelectorAll('[data-delete-event]').forEach(button => button.addEventListener('click', () => deleteEvent(button.dataset.deleteEvent)));
+  }
+
+  function resetEventForm() {
+    $('eventForm').reset();
+    $('editingEventId').value = '';
+    $('eventFormHeading').textContent = 'Add a competition / programme';
+    $('createEventBtn').textContent = 'ADD EVENT TO PROGRAMME →';
+    $('cancelEventEditBtn').classList.add('admin-section-hidden');
+  }
+
+  function loadEventForEdit(eventId) {
+    if (currentRole !== 'admin') return;
+    const event = events.find(item => item.id === eventId);
+    if (!event) return;
+    $('editingEventId').value = event.id;
+    $('newEventTitle').value = event.title || '';
+    $('newEventCategory').value = event.category || 'Other';
+    $('newEventType').value = event.competition_type || 'individual';
+    $('newEventDate').value = event.event_date || '';
+    $('newEventTime').value = event.event_time || '';
+    $('newEventVenue').value = event.venue || '';
+    $('eventFormHeading').textContent = 'Edit event: ' + event.title;
+    $('createEventBtn').textContent = 'SAVE EVENT CHANGES →';
+    $('cancelEventEditBtn').classList.remove('admin-section-hidden');
+    $('eventForm').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+
+  async function deleteEvent(eventId) {
+    if (currentRole !== 'admin') return;
+    const event = events.find(item => item.id === eventId);
+    if (!event) return;
+    const linkedResults = results.filter(result => result.event_id === eventId);
+    const warning = linkedResults.length
+      ? ` This event has ${linkedResults.length} result(s). Deleting it will also permanently delete those results, remove their winner entries, and recalculate department scores.`
+      : ' No results are currently linked to this event.';
+    if (!window.confirm(`Delete the event "${event.title}"?${warning} This action cannot be undone.`)) return;
+    try {
+      const photoPaths = linkedResults.map(result => result.image_path).filter(Boolean);
+      const {error} = await db.from('events').delete().eq('id', eventId);
+      if (error) throw error;
+      let photoWarning = false;
+      if (photoPaths.length) {
+        const {error:photoError} = await db.storage.from('aroha-winner-photos').remove(photoPaths);
+        photoWarning = Boolean(photoError);
+      }
+      if ($('editingEventId').value === eventId) resetEventForm();
+      await loadData();
+      notice('adminAlert', photoWarning
+        ? 'Event and linked results deleted; scores recalculated. One or more stored photographs may need manual cleanup.'
+        : 'Event deleted. Any linked results were removed and department scores recalculated.', 'success');
+      toast('Event deleted.');
+    } catch (err) {
+      notice('adminAlert', err.message || 'Could not delete this event.', 'error');
     }
   }
 
@@ -212,14 +291,48 @@
 
   $('eventForm').addEventListener('submit', async e => {
     e.preventDefault(); if (currentRole !== 'admin') return;
-    const btn = $('createEventBtn'); btn.disabled=true; btn.textContent='ADDING…';
+    const btn = $('createEventBtn');
+    const editingId = $('editingEventId').value;
+    btn.disabled = true; btn.textContent = editingId ? 'SAVING…' : 'ADDING…';
     try {
-      const row = {title:$('newEventTitle').value.trim(),category:$('newEventCategory').value,competition_type:$('newEventType').value,event_date:$('newEventDate').value || null,event_time:$('newEventTime').value.trim() || null,venue:$('newEventVenue').value.trim() || null,is_published:true,created_by:currentUser.id};
-      const {error} = await db.from('events').insert(row); if (error) throw error;
-      $('eventForm').reset(); await loadData(); notice('adminAlert','Event added to the public programme and results selector.','success'); toast('Event created.');
-    } catch (err) { notice('adminAlert',err.message || 'Could not create event.','error'); }
-    finally { btn.disabled=false; btn.textContent='ADD EVENT TO PROGRAMME →'; }
+      const row = {
+        title:$('newEventTitle').value.trim(),
+        category:$('newEventCategory').value,
+        competition_type:$('newEventType').value,
+        event_date:$('newEventDate').value || null,
+        event_time:$('newEventTime').value.trim() || null,
+        venue:$('newEventVenue').value.trim() || null
+      };
+      if (editingId) {
+        const oldEvent = events.find(item => item.id === editingId);
+        const hasResults = results.some(result => result.event_id === editingId);
+        if (hasResults && oldEvent && oldEvent.competition_type !== row.competition_type) {
+          const proceed = window.confirm('This event already has results. Changing its type will recalculate every linked result using the new scoring rules. Continue?');
+          if (!proceed) { btn.disabled = false; btn.textContent = 'SAVE EVENT CHANGES →'; return; }
+        }
+        const {error} = await db.from('events').update(row).eq('id', editingId);
+        if (error) throw error;
+        resetEventForm();
+        await loadData();
+        notice('adminAlert','Event updated. The public programme and result selector have been refreshed.','success');
+        toast('Event updated.');
+      } else {
+        const {error} = await db.from('events').insert({...row,is_published:true,created_by:currentUser.id});
+        if (error) throw error;
+        resetEventForm();
+        await loadData();
+        notice('adminAlert','Event added to the public programme and results selector.','success');
+        toast('Event created.');
+      }
+    } catch (err) {
+      notice('adminAlert',err.message || 'Could not save this event.','error');
+    } finally {
+      btn.disabled = false;
+      if (!$('editingEventId').value) btn.textContent = 'ADD EVENT TO PROGRAMME →';
+    }
   });
+
+  $('cancelEventEditBtn').addEventListener('click', resetEventForm);
 
   $('adminTabs').addEventListener('click', e => {
     const button = e.target.closest('[data-tab]'); if (!button) return;
