@@ -11,7 +11,9 @@
   let results = [];
   let scores = [];
   let gallery = [];
+  let festivalSettings = null;
   let toastTimer;
+  let publicRefreshTimer = null;
 
   const initials = (name) => String(name || '?').trim().split(/\s+/).slice(0,2).map(x => x[0] || '').join('').toUpperCase();
   const awardPoints = (type, place) => type === 'group' ? ({1:10,2:7,3:2}[place] || 0) : ({1:5,2:3,3:1}[place] || 0);
@@ -51,7 +53,7 @@
       const person = r.event?.competition_type === 'group' ? (r.team_name || 'Winning team') : (r.winner_name || 'Winner');
       const points = awardPoints(r.event?.competition_type, Number(r.placement));
       const img = photoUrl(r.image_path);
-      return `<article class="winner-card"><div class="winner-image">${img ? `<img src="${esc(img)}" alt="${esc(person)}" loading="lazy" onerror="this.remove()">` : `<div class="initials">${esc(initials(person))}</div>`}</div><div class="winner-copy"><span class="winner-place">${placeName(Number(r.placement))}</span><h3>${esc(person)}</h3><span class="winner-event">${esc(r.event?.title || 'Competition')}</span><span class="winner-dept">${esc(r.department?.name || r.department_code)}</span><span class="winner-points">${points} POINT${points === 1 ? '' : 'S'} · ${r.event?.competition_type === 'group' ? 'GROUP' : 'INDIVIDUAL'}</span><button type="button" class="winner-share" data-share-winner="${esc(r.id)}">↗ SHARE WINNER POST</button></div></article>`;
+      return `<article class="winner-card"><div class="winner-image">${img ? `<img src="${esc(img)}" alt="${esc(person)}" loading="lazy" onerror="this.remove()">` : `<div class="initials">${esc(initials(person))}</div>`}</div><div class="winner-copy"><span class="winner-place">${placeName(Number(r.placement))}</span><h3>${esc(person)}</h3><span class="winner-event">${esc(r.event?.title || 'Competition')}</span><span class="winner-dept">${esc(r.department?.name || r.department_code)}</span><span class="winner-points">${points} POINT${points === 1 ? '' : 'S'} · ${r.event?.competition_type === 'group' ? 'GROUP' : 'INDIVIDUAL'}</span><div class="winner-card-actions"><button type="button" class="winner-share" data-share-winner="${esc(r.id)}">↗ SHARE WINNER POST</button><button type="button" class="winner-certificate" data-certificate-winner="${esc(r.id)}">↓ DOWNLOAD CERTIFICATE</button></div></div></article>`;
     }).join('') : '<div class="empty-state">Official winners will appear here as soon as stage-control results are published.</div>';
   }
 
@@ -199,11 +201,111 @@
     }
   }
 
+
+  async function downloadWinnerCertificate(resultId, button) {
+    const result = results.find(item => item.id === resultId);
+    if (!result) return;
+    const JsPDF = window.jspdf?.jsPDF;
+    if (!JsPDF) {
+      toast('Certificate PDF library did not load. Please refresh and try again.');
+      return;
+    }
+    const original = button.textContent;
+    button.disabled = true; button.textContent = 'PREPARING CERTIFICATE…';
+    try {
+      const type = result.event?.competition_type || 'individual';
+      const person = type === 'group' ? (result.team_name || 'Winning team') : (result.winner_name || 'Winner');
+      const department = result.department?.name || result.department_code || 'Department';
+      const eventName = result.event?.title || 'Competition';
+      const placement = Number(result.placement);
+      const award = placeName(placement);
+      const points = awardPoints(type, placement);
+      const pdf = new JsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+      pdf.setFillColor(35, 9, 17); pdf.rect(0, 0, 297, 210, 'F');
+      pdf.setDrawColor(208, 171, 105); pdf.setLineWidth(0.8); pdf.rect(8, 8, 281, 194);
+      pdf.setDrawColor(151, 111, 62); pdf.setLineWidth(0.25); pdf.rect(12, 12, 273, 186);
+      pdf.setTextColor(233, 206, 145); pdf.setFont('times','bold'); pdf.setFontSize(15);
+      pdf.text('MGCSIILS CHERUVARAKONAM', 148.5, 29, {align:'center'});
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(196, 166, 119);
+      pdf.text('THE ANNUAL ARTS FESTIVAL', 148.5, 36, {align:'center'});
+      pdf.setFont('times','bold'); pdf.setFontSize(37); pdf.setTextColor(244, 221, 176);
+      pdf.text("AROHA '26", 148.5, 57, {align:'center'});
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(10); pdf.setTextColor(224, 190, 120);
+      pdf.text('CERTIFICATE OF ACHIEVEMENT', 148.5, 70, {align:'center'});
+      pdf.setDrawColor(191, 149, 82); pdf.line(70, 76, 227, 76);
+      pdf.setFont('times','italic'); pdf.setFontSize(14); pdf.setTextColor(244, 230, 204);
+      pdf.text('This certificate is proudly presented to', 148.5, 90, {align:'center'});
+      pdf.setFont('times','bold'); pdf.setFontSize(person.length > 28 ? 23 : person.length > 18 ? 27 : 32); pdf.setTextColor(249, 222, 167);
+      const nameLines = pdf.splitTextToSize(person, 230);
+      pdf.text(nameLines.slice(0,2), 148.5, 108, {align:'center'});
+      const nameBottom = 108 + (Math.min(nameLines.length,2)-1) * 11;
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.setTextColor(228, 204, 165);
+      pdf.text(award, 148.5, nameBottom + 15, {align:'center'});
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(10); pdf.setTextColor(235, 220, 196);
+      pdf.text(`For outstanding achievement in ${eventName}`, 148.5, nameBottom + 25, {align:'center',maxWidth:235});
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(232, 199, 133);
+      pdf.text(`DEPARTMENT: ${department.toUpperCase()}`, 148.5, nameBottom + 38, {align:'center'});
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(218, 190, 153);
+      pdf.text(`${points} POINTS · ${type.toUpperCase()} EVENT`, 148.5, nameBottom + 47, {align:'center'});
+      pdf.setDrawColor(151, 111, 62); pdf.line(30, 184, 91, 184); pdf.line(206, 184, 267, 184);
+      pdf.setFontSize(7); pdf.setTextColor(188, 161, 123);
+      pdf.text('ARTS CLUB', 60, 190, {align:'center'}); pdf.text('MGCSIILS CHERUVARAKONAM', 236, 190, {align:'center'});
+      const safeName = person.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'winner';
+      pdf.save(`aroha-26-${safeName}-certificate.pdf`);
+      toast('Winner certificate downloaded.');
+    } catch (error) {
+      console.error('AROHA certificate:', error);
+      toast(error.message || 'Could not create certificate.');
+    } finally {
+      button.disabled = false; button.textContent = original;
+    }
+  }
+
+  function sortedScores() {
+    return [...scores].sort((a,b) => Number(b.points)-Number(a.points) || Number(b.gold)-Number(a.gold) || Number(b.silver)-Number(a.silver) || Number(b.bronze)-Number(a.bronze) || Number(a.display_order)-Number(b.display_order));
+  }
+
+  function renderChampionshipRace(ordered) {
+    const host = $('championshipRace');
+    if (!host) return;
+    const leaderPoints = Number(ordered[0]?.points) || 0;
+    host.innerHTML = ordered.map((department,index) => {
+      const points = Number(department.points) || 0;
+      const percent = leaderPoints > 0 ? Math.max(3, Math.round(points / leaderPoints * 100)) : 0;
+      const gap = index === 0 && points > 0 ? 'CURRENT LEADER' : leaderPoints > points ? `${leaderPoints-points} PTS BEHIND` : 'ON THE BOARD';
+      return `<div class="race-row"><div class="race-row-top"><strong>${esc(department.name)}</strong><span>${points} PTS · ${gap}</span></div><div class="race-track"><i style="width:${percent}%"></i></div></div>`;
+    }).join('') || '<p class="score-footnote">Department standings will appear as results are published.</p>';
+  }
+
+  function renderChampionshipFinale(ordered) {
+    const locked = $('finaleLocked'), revealed = $('finaleRevealed');
+    if (!locked || !revealed) return;
+    const isRevealed = Boolean(festivalSettings?.championship_revealed);
+    locked.hidden = isRevealed;
+    revealed.hidden = !isRevealed;
+    const liveLeader = ordered[0] || null;
+    if (isRevealed) {
+      const championCodes = festivalSettings.champion_departments || [];
+      const champions = championCodes.map(code => departments.find(dept => dept.code === code)?.name || code);
+      $('finaleChampionNames').textContent = champions.length ? champions.join(' · ') : (liveLeader?.name || 'CHAMPION');
+      $('finaleChampionPoints').textContent = Number(festivalSettings.champion_points ?? liveLeader?.points ?? 0).toLocaleString('en-IN');
+      const gold = Number(festivalSettings.champion_gold ?? liveLeader?.gold ?? 0);
+      const silver = Number(festivalSettings.champion_silver ?? liveLeader?.silver ?? 0);
+      const bronze = Number(festivalSettings.champion_bronze ?? liveLeader?.bronze ?? 0);
+      $('finaleChampionMedals').textContent = `🥇 ${gold} GOLD   ·   🥈 ${silver} SILVER   ·   🥉 ${bronze} BRONZE`;
+    }
+  }
+
   function renderScores() {
-    const ordered = [...scores].sort((a,b) => Number(b.points)-Number(a.points) || Number(b.gold)-Number(a.gold) || Number(b.silver)-Number(a.silver) || Number(b.bronze)-Number(a.bronze) || Number(a.display_order)-Number(b.display_order));
-    $('championName').textContent = (ordered[0] && Number(ordered[0].points) > 0) ? ordered[0].name : 'TO BE DECIDED';
+    const ordered = sortedScores();
+    const leader = ordered[0] && Number(ordered[0].points) > 0 ? ordered[0] : null;
+    $('championName').textContent = leader ? leader.name : 'TO BE DECIDED';
+    const label = $('championStatusLabel');
+    if (label) label.textContent = festivalSettings?.championship_revealed ? 'OFFICIAL CHAMPION' : 'CURRENT LEADER';
     const rows = ordered.map((d, i) => `<div class="score-row ${i === 0 && Number(d.points) > 0 ? 'champion' : ''}"><span class="rank-no">${String(i+1).padStart(2,'0')}</span><span class="score-dept-name">${esc(d.name)}</span><span class="medal-count">${Number(d.gold)||0}</span><span class="medal-count">${Number(d.silver)||0}</span><span class="medal-count">${Number(d.bronze)||0}</span><strong class="score-total">${Number(d.points)||0}</strong></div>`).join('');
     $('scoreTable').innerHTML = `<div class="score-table-head"><span>RANK</span><span>DEPARTMENT</span><span>G</span><span>S</span><span>B</span><span>POINTS</span></div>${rows || '<div class="score-empty">Department scores will appear here.</div>'}`;
+    renderChampionshipRace(ordered);
+    renderChampionshipFinale(ordered);
   }
 
   function renderGallery() {
@@ -221,6 +323,7 @@
   async function loadRemoteData() {
     if (!db) {
       scores = departments.map(d => ({...d, gold:0, silver:0, bronze:0, points:0}));
+      festivalSettings = null;
       return;
     }
     const [deptRes, eventRes, resultRes, scoreRes, galleryRes] = await Promise.all([
@@ -240,6 +343,43 @@
     results = resultRes.data || [];
     scores = scoreRes.data?.length ? scoreRes.data : departments.map(d => ({...d,gold:0,silver:0,bronze:0,points:0}));
     gallery = galleryRes.data || [];
+    try {
+      const {data,error} = await db.from('festival_settings').select('championship_revealed,champion_departments,champion_points,champion_gold,champion_silver,champion_bronze').eq('singleton',true).maybeSingle();
+      festivalSettings = error ? null : data;
+      if (error) console.info('Festival finale control not installed yet; run supabase/add-festival-features.sql.');
+    } catch (error) {
+      festivalSettings = null;
+      console.info('Festival finale settings unavailable:', error);
+    }
+  }
+
+
+  function setupFestivalCountdown() {
+    const target = new Date('2026-11-05T09:00:00+05:30').getTime();
+    const finish = new Date('2026-11-13T13:00:00+05:30').getTime();
+    const tick = () => {
+      const now = Date.now();
+      if (now < target) {
+        const distance = target - now;
+        $('countdownHeadline').textContent = 'COUNTING DOWN TO AROHA ’26';
+        $('countdownSubline').textContent = 'THE FESTIVAL OPENS · 5 NOVEMBER 2026 · 9:00 AM';
+        $('countdownClock').hidden = false;
+        $('countDays').textContent = String(Math.floor(distance / 86400000)).padStart(2,'0');
+        $('countHours').textContent = String(Math.floor(distance % 86400000 / 3600000)).padStart(2,'0');
+        $('countMinutes').textContent = String(Math.floor(distance % 3600000 / 60000)).padStart(2,'0');
+        $('countSeconds').textContent = String(Math.floor(distance % 60000 / 1000)).padStart(2,'0');
+      } else if (now < finish) {
+        $('countdownHeadline').textContent = 'AROHA ’26 IS IN FULL FLOW';
+        $('countdownSubline').textContent = 'THE STAGE IS ALIVE · 5–13 NOVEMBER 2026';
+        $('countdownClock').hidden = true;
+      } else {
+        $('countdownHeadline').textContent = 'THE ART WILL REMAIN';
+        $('countdownSubline').textContent = 'THANK YOU FOR MAKING AROHA ’26 UNFORGETTABLE';
+        $('countdownClock').hidden = true;
+      }
+    };
+    tick();
+    setInterval(tick,1000);
   }
 
   function setupDancerScroll() {
@@ -268,8 +408,10 @@
   $('winnerDepartment').addEventListener('change', renderWinners);
   $('winnerType').addEventListener('change', renderWinners);
   $('winnerGrid').addEventListener('click', e => {
-    const button = e.target.closest('[data-share-winner]');
-    if (button) shareWinnerPost(button.dataset.shareWinner, button);
+    const shareButton = e.target.closest('[data-share-winner]');
+    const certificateButton = e.target.closest('[data-certificate-winner]');
+    if (shareButton) shareWinnerPost(shareButton.dataset.shareWinner, shareButton);
+    if (certificateButton) downloadWinnerCertificate(certificateButton.dataset.certificateWinner, certificateButton);
   });
   $('menuToggle').addEventListener('click', () => { const open = $('mainNav').classList.toggle('open'); $('menuToggle').setAttribute('aria-expanded', String(open)); });
   document.querySelectorAll('#mainNav a').forEach(a => a.addEventListener('click', () => $('mainNav').classList.remove('open')));
@@ -278,8 +420,17 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') $('lightboxClose').click(); });
 
   (async () => {
+    setupFestivalCountdown();
     try { await loadRemoteData(); }
     catch (e) { console.error(e); scores = departments.map(d => ({...d,gold:0,silver:0,bronze:0,points:0})); }
     renderEvents(); renderWinnerFilters(); renderWinners(); renderScores(); renderGallery(); setupDancerScroll();
+    if (db) {
+      publicRefreshTimer = setInterval(async () => {
+        try {
+          await loadRemoteData();
+          renderEvents(); renderWinners(); renderScores(); renderGallery();
+        } catch (error) { console.error('AROHA live refresh:', error); }
+      }, 25000);
+    }
   })();
 })();
