@@ -241,7 +241,6 @@
       const person = type === 'group'
         ? (result.team_name || 'Winning team')
         : (result.winner_name || 'Winner');
-      const department = result.department?.name || result.department_code || 'Department';
       const eventName = result.event?.title || 'Competition';
       const placement = Number(result.placement);
       const position = ({1:'1st', 2:'2nd', 3:'3rd'}[placement] || 'Winner');
@@ -264,15 +263,6 @@
       );
       ctx.font = `600 ${nameSize}px Georgia, 'Times New Roman', serif`;
       ctx.fillText(person, 982, 666, 730);
-
-      // Department sits neatly beneath the name line.
-      const departmentText = `DEPARTMENT: ${department.toUpperCase()}`;
-      const deptSize = fitCertificateFont(
-        ctx, departmentText, 540, "Arial, sans-serif", 17, 12
-      );
-      ctx.font = `600 ${deptSize}px Arial, sans-serif`;
-      ctx.fillStyle = '#7a3b20';
-      ctx.fillText(departmentText, 982, 699, 540);
 
       // Fill the two printed blanks in the achievement sentence.
       const positionSize = fitCertificateFont(
