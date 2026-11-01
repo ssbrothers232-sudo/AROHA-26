@@ -103,9 +103,38 @@
     $('recentResults').innerHTML = results.length ? results.slice(0,12).map(r => {
       const type = r.event?.competition_type || 'individual';
       const name = type === 'group' ? (r.team_name || 'Team') : (r.winner_name || 'Winner');
-      return `<div class="result-item"><div><strong>${esc(name)}</strong><small>${esc(r.event?.title || 'Event')} · ${esc(r.department?.name || r.department_code)} · ${esc(({1:'1st',2:'2nd',3:'3rd'}[r.placement] || ''))} place · ${placePoints(type,Number(r.placement))} points</small><span class="place-tag">${type === 'group' ? 'GROUP' : 'INDIVIDUAL'}</span></div><button type="button" data-edit-result="${esc(r.id)}">CORRECT</button></div>`;
+      const deleteButton = currentRole === 'admin' ? `<button type="button" class="delete-result" data-delete-result="${esc(r.id)}">DELETE</button>` : '';
+      return `<div class="result-item"><div><strong>${esc(name)}</strong><small>${esc(r.event?.title || 'Event')} · ${esc(r.department?.name || r.department_code)} · ${esc(({1:'1st',2:'2nd',3:'3rd'}[r.placement] || ''))} place · ${placePoints(type,Number(r.placement))} points</small><span class="place-tag">${type === 'group' ? 'GROUP' : 'INDIVIDUAL'}</span></div><div class="result-actions"><button type="button" data-edit-result="${esc(r.id)}">CORRECT</button>${deleteButton}</div></div>`;
     }).join('') : '<p class="card-sub">No results have been entered yet. Submit the first official result using the form.</p>';
     document.querySelectorAll('[data-edit-result]').forEach(btn => btn.addEventListener('click',()=>loadForEdit(btn.dataset.editResult)));
+    document.querySelectorAll('[data-delete-result]').forEach(btn => btn.addEventListener('click',()=>deleteResult(btn.dataset.deleteResult)));
+  }
+
+  async function deleteResult(id) {
+    if (currentRole !== 'admin') {
+      notice('adminAlert', 'Only the AROHA administrator can delete published results.', 'error');
+      return;
+    }
+    const result = results.find(item => item.id === id);
+    if (!result) return;
+    const type = result.event?.competition_type || 'individual';
+    const name = type === 'group' ? (result.team_name || 'this team') : (result.winner_name || 'this winner');
+    const eventName = result.event?.title || 'this event';
+    if (!window.confirm(`Permanently delete the result for "${name}" in "${eventName}"? Department scores will be recalculated. This cannot be undone.`)) return;
+
+    try {
+      const { error } = await db.from('results').delete().eq('id', id);
+      if (error) throw error;
+      if (result.image_path) {
+        const { error: photoError } = await db.storage.from('aroha-winner-photos').remove([result.image_path]);
+        if (photoError) console.warn('Result deleted, but its photo could not be removed:', photoError.message);
+      }
+      await loadData();
+      notice('adminAlert', 'Result deleted. The department scoreboard and public winners list have been recalculated.', 'success');
+      toast('Result deleted and scores recalculated.');
+    } catch (err) {
+      notice('adminAlert', err.message || 'Could not delete this result.', 'error');
+    }
   }
 
   async function checkSession(session) {
