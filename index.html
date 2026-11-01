@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#260c14">
+  <meta name="description" content="AROHA ’26 — The Annual Arts Festival of MGCSIILS Cheruvarakonam. Events, winners, photographs and live department standings.">
+  <title>AROHA ’26 | MGCSIILS Cheruvarakonam</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body class="public-site">
+  <div class="topline"><span class="topline-mark">✦</span> MGCSIILS CHERUVARAKONAM <span class="topline-divider">/</span> THE ANNUAL ARTS FESTIVAL <span class="topline-mark">✦</span></div>
+  <header class="site-header" id="top">
+    <a class="institution" href="#top" aria-label="MGCSIILS Cheruvarakonam home"><span class="institution-seal">M</span><span><strong>MGCSIILS</strong><small>CHERUVARAKONAM</small></span></a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="main-nav" id="mainNav">
+      <a href="#about">About</a><a href="#events">Events</a><a href="#winners">Winners</a><a href="#scoreboard">Scoreboard</a><a href="#gallery">Gallery</a>
+    </nav>
+    <a class="control-link" href="admin.html"><span>♙</span> STAGE CONTROL</a>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-texture"></div><div class="hero-glow glow-a"></div><div class="hero-glow glow-b"></div>
+      <div class="hero-ornament ornament-left">❧</div><div class="hero-ornament ornament-right">❧</div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="crest"><span class="crest-line"></span><span>MGCSIILS · PRESENTS</span><span class="crest-line"></span></div>
+          <p class="hero-kicker">A CELEBRATION OF ART, CULTURE & EXPRESSION</p>
+          <h1 class="hero-title">AROHA<span class="hero-apostrophe">’</span><span class="hero-year">26</span></h1>
+          <div class="title-flourish"><span></span> ❧ <span></span></div>
+          <p class="hero-subtitle">THE ANNUAL ARTS FESTIVAL</p>
+          <p class="hero-intro">Five departments. Countless stories. One stage where every talent finds its rhythm.</p>
+          <div class="hero-actions"><a class="gold-button" href="#events">EXPLORE AROHA <span>↗</span></a><a class="quiet-link" href="#scoreboard">VIEW LIVE STANDINGS <span>↓</span></a></div>
+          <div class="hero-facts"><div><strong id="heroEventCount">—</strong><small>COMPETITIONS</small></div><i></i><div><strong>05</strong><small>DEPARTMENTS</small></div><i></i><div><strong>01</strong><small>CELEBRATION</small></div></div>
+        </div>
+        <div class="hero-visual" aria-hidden="true"><div class="halo halo-one"></div><div class="halo halo-two"></div><div class="hero-dancer-frame"><img class="hero-dancer" src="assets/images/aroha-dancer.webp" alt=""></div><div class="visual-caption">THE ART OF<br><em>BEING ALIVE</em></div><div class="visual-seal">✦<small>AROHA<br>’26</small>✦</div></div>
+      </div>
+      <div class="hero-bottom"><span>SCROLL TO EXPERIENCE</span><span class="scroll-indicator"></span><span>CHERUVARAKONAM · KERALA</span></div>
+    </section>
+
+    <div class="ribbon"><span>ARTISTRY</span><b>✦</b><span>UNITY</span><b>✦</b><span>EXPRESSION</span><b>✦</b><span>EXCELLENCE</span><b>✦</b><span>ARTISTRY</span></div>
+
+    <section class="about-section section-pad" id="about">
+      <div class="section-overline"><span>01</span><i></i> THE SPIRIT OF AROHA</div>
+      <div class="about-grid"><div><h2 class="editorial-title">A stage for<br><em>every expression.</em></h2></div><div class="about-copy"><p>AROHA ’26 is the annual arts festival of MGCSIILS Cheruvarakonam — a celebration of imagination, performance, language and the many ways we express who we are.</p><p>Across five departments, students come together to compete, collaborate and create moments that deserve to be remembered.</p><div class="about-signature">ONE CAMPUS <span>·</span> MANY TALENTS <span>·</span> ONE AROHA</div></div></div>
+      <div class="department-chips"><span>BBA</span><span>B.COM</span><span>BA</span><span>UNITARY</span><span>LLM</span></div>
+    </section>
+
+    <section class="events-section section-pad" id="events">
+      <div class="section-overline light-overline"><span>02</span><i></i> THE PROGRAMME</div>
+      <div class="section-heading-row"><h2 class="editorial-title light-title">Every event.<br><em>Its own spotlight.</em></h2><p class="section-lead">Explore the competitions and programmes that bring the AROHA stage to life.</p></div>
+      <div class="event-toolbar"><div class="event-count" id="eventCount">THE PROGRAMME <b>—</b></div><div class="event-filters" id="eventFilters"><button class="active" data-filter="All">ALL</button><button data-filter="Stage">STAGE</button><button data-filter="Literary">LITERARY</button><button data-filter="Fine Arts">FINE ARTS</button><button data-filter="Other">OTHER</button></div></div>
+      <div class="events-grid" id="eventGrid"><div class="empty-state">The event programme will appear here.</div></div>
+    </section>
+
+    <section class="winners-section section-pad" id="winners">
+      <div class="section-overline"><span>03</span><i></i> APPLAUSE, PLEASE</div>
+      <div class="section-heading-row"><h2 class="editorial-title">The names<br><em>to remember.</em></h2><p class="section-lead dark-lead">Every result celebrates hours of practice, courage and creativity. Meet the AROHA ’26 achievers.</p></div>
+      <div class="winner-toolbar"><div class="winner-total" id="winnerCount">WINNERS DIRECTORY <b>—</b></div><div class="winner-filters"><select id="winnerDepartment" aria-label="Filter by department"><option value="All">ALL DEPARTMENTS</option></select><select id="winnerType" aria-label="Filter by event type"><option value="All">ALL EVENTS</option><option value="individual">INDIVIDUAL</option><option value="group">GROUP</option></select></div></div>
+      <div class="winners-grid" id="winnerGrid"><div class="empty-state">Official winners will be published here after results are submitted.</div></div>
+    </section>
+
+    <section class="score-section section-pad" id="scoreboard">
+      <div class="section-overline light-overline"><span>04</span><i></i> THE DEPARTMENT CHALLENGE</div>
+      <div class="section-heading-row"><h2 class="editorial-title light-title">One crown.<br><em>Five contenders.</em></h2><p class="section-lead">Points are calculated automatically from published results. Every podium finish moves the scoreboard.</p></div>
+      <div class="scoring-note"><span>INDIVIDUAL</span><b>1ST · 5 PTS</b><b>2ND · 3 PTS</b><b>3RD · 1 PT</b><i></i><span>GROUP</span><b>1ST · 10 PTS</b><b>2ND · 7 PTS</b><b>3RD · 2 PTS</b></div>
+      <div class="scoreboard-layout"><div class="champion-panel" id="championPanel"><div class="champion-star">✦</div><span>OVERALL CHAMPIONS</span><strong id="championName">TO BE DECIDED</strong><small>THE AROHA ’26 TITLE</small></div><div class="score-table-wrap"><div class="score-table-title"><strong>DEPARTMENT STANDINGS</strong><span>LIVE RESULTS</span></div><div id="scoreTable" class="score-table"><div class="score-table-head"><span>RANK</span><span>DEPARTMENT</span><span>G</span><span>S</span><span>B</span><span>POINTS</span></div></div><p class="score-footnote">G Gold · S Silver · B Bronze. Scores reflect published results only.</p></div></div>
+    </section>
+
+    <section class="gallery-section section-pad" id="gallery">
+      <div class="section-overline"><span>05</span><i></i> MOMENTS IN MOTION</div>
+      <div class="section-heading-row"><h2 class="editorial-title">A festival<br><em>worth remembering.</em></h2><p class="section-lead dark-lead">The performances, the people and the moments between the applause.</p></div>
+      <div class="gallery-grid" id="galleryGrid"><div class="empty-state">AROHA photographs will appear here.</div></div>
+    </section>
+
+    <section class="finale-section"><div class="finale-ornament">❧</div><p>MGCSIILS CHERUVARAKONAM</p><h2>THE STAGE MAY FALL SILENT.<br><em>THE ART WILL REMAIN.</em></h2><span>AROHA ’26 · THE ANNUAL ARTS FESTIVAL</span><a href="#top" class="back-top">RETURN TO THE BEGINNING ↑</a></section>
+  </main>
+
+  <footer class="site-footer"><a class="institution footer-institution" href="#top"><span class="institution-seal">M</span><span><strong>MGCSIILS</strong><small>CHERUVARAKONAM</small></span></a><span>MADE OF MANY TALENTS. UNITED BY AROHA.</span><a href="admin.html" class="footer-control">♙ STAGE CONTROL LOGIN</a></footer>
+  <img src="assets/images/aroha-dancer.webp" alt="" aria-hidden="true" class="scroll-dancer" id="scrollDancer">
+  <div class="lightbox" id="lightbox" aria-hidden="true"><button id="lightboxClose" aria-label="Close photo">×</button><img id="lightboxImage" alt="AROHA ’26 photograph"><p id="lightboxCaption"></p></div>
+  <div class="toast" id="siteToast" role="status" aria-live="polite"></div>
+</body>
+</html>

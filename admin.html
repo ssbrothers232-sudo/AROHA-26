@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#210911">
+  <title>Stage Control | AROHA ’26</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="admin.js" defer></script>
+</head>
+<body class="admin-body">
+  <header class="admin-topbar"><a class="admin-brand" href="index.html"><span class="admin-brand-mark">M</span><span class="admin-brand-copy"><strong>AROHA ’26</strong><small>MGCSIILS · STAGE CONTROL</small></span></a><div class="admin-top-actions"><span id="adminUser" class="admin-user"></span><a href="index.html" class="admin-back">← PUBLIC WEBSITE</a><button id="logoutBtn" class="admin-logout admin-section-hidden">LOG OUT</button></div></header>
+  <main id="loginView" class="login-wrap"><div class="login-mark">✦</div><div class="admin-overline">RESTRICTED ACCESS · AUTHORISED PERSONNEL ONLY</div><h1>Stage Control.</h1><p>Sign in with the account issued by the AROHA ’26 administrator. This portal is for entering competition results and uploading official photographs.</p>
+    <div id="configWarning" class="admin-alert error admin-section-hidden">The Supabase connection has not been configured yet. Follow the setup guide to add your project URL and anon key to <b>config.js</b>.</div>
+    <div id="loginAlert" class="admin-alert admin-section-hidden" role="alert"></div>
+    <form id="loginForm"><div class="field"><label for="loginEmail">EMAIL ADDRESS</label><input id="loginEmail" type="email" autocomplete="username" required placeholder="your.authorised@email.com"></div><div class="field"><label for="loginPassword">PASSWORD</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Enter your password"></div><button class="admin-primary" type="submit" id="loginBtn">SIGN IN TO STAGE CONTROL →</button></form>
+    <div class="login-help">Access is granted only to accounts created by the AROHA administrator. There is no public registration link. Contact the administrator if your account or role is missing.</div>
+  </main>
+
+  <main id="adminView" class="admin-shell admin-section-hidden">
+    <div class="admin-heading"><div><div class="admin-overline">AROHA ’26 · RESULTS OPERATIONS</div><h1>Control Room.</h1><p>Submit verified results. Department scores and the public winners board update automatically.</p></div><div class="admin-overline" id="roleBadge">STAGE CONTROL</div></div>
+    <div id="adminAlert" class="admin-alert admin-section-hidden" role="status"></div>
+    <section class="admin-stats"><div class="admin-stat"><strong id="statResults">0</strong><span>PUBLISHED RESULTS</span></div><div class="admin-stat"><strong id="statEvents">0</strong><span>COMPETITIONS</span></div><div class="admin-stat"><strong id="statPhotos">0</strong><span>GALLERY PHOTOS</span></div><div class="admin-stat"><strong>05</strong><span>DEPARTMENTS</span></div></section>
+
+    <div class="admin-tab-row" id="adminTabs"><button class="active" data-tab="resultsPanel">ADD / UPDATE RESULT</button><button data-tab="galleryPanel">UPLOAD GALLERY</button><button data-tab="eventsPanel" id="eventsTab" class="admin-section-hidden">MANAGE EVENTS</button></div>
+    <div class="admin-grid" id="resultsLayout">
+      <section class="admin-card" id="resultsPanel">
+        <h2 id="resultFormTitle">Add a result</h2><p class="card-sub">Choose the competition and position. The scoring system selects the correct points automatically.</p>
+        <form id="resultForm">
+          <input type="hidden" id="editingResultId"><input type="hidden" id="existingPhotoPath">
+          <div class="field"><label for="eventSelect">EVENT / COMPETITION *</label><select id="eventSelect" required><option value="">Loading competitions…</option></select></div>
+          <div class="field"><label>COMPETITION TYPE</label><div id="competitionTypeLabel" class="points-preview">Select an event to see its type.</div></div>
+          <div class="field"><label>POSITION *</label><div class="radio-row"><label class="radio-chip"><input type="radio" name="placement" value="1" checked> 1ST</label><label class="radio-chip"><input type="radio" name="placement" value="2"> 2ND</label><label class="radio-chip"><input type="radio" name="placement" value="3"> 3RD</label></div></div>
+          <div class="field"><label for="departmentSelect">DEPARTMENT *</label><select id="departmentSelect" required><option value="">Loading departments…</option></select><small>For a group result, select the single department represented by the entire team. The award is credited once to that department.</small></div>
+          <div id="individualFields"><div class="field"><label for="winnerName">WINNER NAME *</label><input id="winnerName" type="text" maxlength="120" placeholder="Enter the participant's name"></div></div>
+          <div id="groupFields" class="admin-section-hidden"><div class="field"><label for="teamName">TEAM NAME *</label><input id="teamName" type="text" maxlength="120" placeholder="Enter the team name"></div><div class="field"><label for="teamMembers">TEAM MEMBERS (OPTIONAL)</label><textarea id="teamMembers" placeholder="One participant per line"></textarea><small>All team members must belong to the selected department.</small></div></div>
+          <div class="field"><label for="winnerPhoto">WINNER / TEAM PHOTO (OPTIONAL)</label><input id="winnerPhoto" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP · Maximum 5 MB. A new upload replaces the existing photograph.</small></div>
+          <div class="field"><label for="resultNotes">NOTES (OPTIONAL)</label><textarea id="resultNotes" maxlength="500" placeholder="Optional note for the organisers"></textarea></div>
+          <div class="points-preview" id="pointsPreview">AWARD: 5 POINTS · INDIVIDUAL FIRST PLACE</div>
+          <button class="admin-primary" type="submit" id="submitResultBtn">PUBLISH RESULT →</button> <button class="admin-secondary admin-section-hidden" id="cancelEditBtn" type="button">CANCEL EDIT</button>
+        </form>
+      </section>
+
+      <aside class="admin-card"><div class="admin-section-title"><h2>Live scoreboard</h2><span class="admin-overline">AUTO TOTALS</span></div><p class="card-sub">This table is calculated directly from published results. No manual point entry.</p><div class="admin-score-list" id="adminScoreList"><p class="card-sub">Loading scores…</p></div><div class="recent-results"><h3>Recent submissions</h3><div class="result-list" id="recentResults"><p class="card-sub">No results have been entered yet.</p></div></div></aside>
+    </div>
+
+    <section class="admin-card admin-section-hidden" id="galleryPanel" style="margin-top:17px"><h2>Upload AROHA photographs</h2><p class="card-sub">Add event photographs to the public gallery. Use images you have permission to publish.</p><form id="galleryForm" class="field-grid"><div class="field"><label for="galleryCaption">PHOTO CAPTION</label><input id="galleryCaption" type="text" maxlength="160" placeholder="e.g. Inauguration ceremony"></div><div class="field"><label for="galleryPhoto">PHOTO FILE *</label><input id="galleryPhoto" type="file" required accept="image/jpeg,image/png,image/webp"></div><div class="field full"><button class="admin-primary" type="submit" id="uploadGalleryBtn">UPLOAD TO PUBLIC GALLERY →</button></div></form><div class="upload-hint">Photo will appear on the public website after upload. Maximum 5 MB per image.</div></section>
+
+    <section class="admin-card admin-section-hidden" id="eventsPanel" style="margin-top:17px"><h2>Create a competition / programme</h2><p class="card-sub">This panel is available only to administrators. Competition type determines the point table used for its results.</p><form id="eventForm" class="field-grid"><div class="field"><label for="newEventTitle">EVENT NAME *</label><input id="newEventTitle" type="text" required maxlength="140" placeholder="e.g. Classical Dance"></div><div class="field"><label for="newEventCategory">CATEGORY *</label><select id="newEventCategory"><option>Stage</option><option>Literary</option><option>Fine Arts</option><option>Other</option></select></div><div class="field"><label for="newEventType">COMPETITION TYPE *</label><select id="newEventType"><option value="individual">Individual</option><option value="group">Group</option><option value="programme">Programme (no points)</option></select></div><div class="field"><label for="newEventDate">DATE</label><input id="newEventDate" type="date"></div><div class="field"><label for="newEventTime">TIME</label><input id="newEventTime" type="text" placeholder="e.g. 10:30 AM"></div><div class="field"><label for="newEventVenue">VENUE</label><input id="newEventVenue" type="text" placeholder="e.g. Main Auditorium"></div><div class="field full"><button class="admin-primary" type="submit" id="createEventBtn">ADD EVENT TO PROGRAMME →</button></div></form></section>
+  </main>
+  <footer class="admin-footer">MGCSIILS CHERUVARAKONAM · AROHA ’26 · AUTHORISED ACCESS ONLY</footer>
+  <div class="toast" id="adminToast" role="status" aria-live="polite"></div>
+</body>
+</html>
