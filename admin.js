@@ -114,12 +114,12 @@
 
   function adminPosterPhotoUrl(path) {
     if (!path) return '';
-    if (/^https?:\\/\\//i.test(path)) return path;
+    if (/^https?:\/\//i.test(path)) return path;
     return db.storage.from('aroha-winner-photos').getPublicUrl(path).data.publicUrl || '';
   }
 
   function adminPosterText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
-    const words = String(text || '').split(/\\s+/);
+    const words = String(text || '').split(/\s+/);
     const lines = [];
     let line = '';
     for (const word of words) {
@@ -164,7 +164,7 @@
       ctx.fillStyle=photoBg; ctx.fillRect(photoX,photoY,photoW,photoH);
       const type=result.event?.competition_type || 'individual';
       const person=type==='group' ? (result.team_name || 'Winning team') : (result.winner_name || 'Winner');
-      const initials=person.trim().split(/\\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase() || '?';
+      const initials=person.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase() || '?';
       if (result.image_path) {
         try {
           const image = new Image();
