@@ -46,7 +46,24 @@
 
     <section class="admin-card admin-section-hidden" id="galleryPanel" style="margin-top:17px"><h2>Upload AROHA photographs</h2><p class="card-sub">Add event photographs to the public gallery. Use images you have permission to publish.</p><form id="galleryForm" class="field-grid"><div class="field"><label for="galleryCaption">PHOTO CAPTION</label><input id="galleryCaption" type="text" maxlength="160" placeholder="e.g. Inauguration ceremony"></div><div class="field"><label for="galleryPhoto">PHOTO FILE *</label><input id="galleryPhoto" type="file" required accept="image/jpeg,image/png,image/webp"></div><div class="field full"><button class="admin-primary" type="submit" id="uploadGalleryBtn">UPLOAD TO PUBLIC GALLERY →</button></div></form><div class="upload-hint">Photo will appear on the public website after upload. Maximum 5 MB per image.</div></section>
 
-    <section class="admin-card admin-section-hidden" id="eventsPanel" style="margin-top:17px"><h2>Create a competition / programme</h2><p class="card-sub">This panel is available only to administrators. Competition type determines the point table used for its results.</p><form id="eventForm" class="field-grid"><div class="field"><label for="newEventTitle">EVENT NAME *</label><input id="newEventTitle" type="text" required maxlength="140" placeholder="e.g. Classical Dance"></div><div class="field"><label for="newEventCategory">CATEGORY *</label><select id="newEventCategory"><option>Stage</option><option>Literary</option><option>Fine Arts</option><option>Other</option></select></div><div class="field"><label for="newEventType">COMPETITION TYPE *</label><select id="newEventType"><option value="individual">Individual</option><option value="group">Group</option><option value="programme">Programme (no points)</option></select></div><div class="field"><label for="newEventDate">DATE</label><input id="newEventDate" type="date"></div><div class="field"><label for="newEventTime">TIME</label><input id="newEventTime" type="text" placeholder="e.g. 10:30 AM"></div><div class="field"><label for="newEventVenue">VENUE</label><input id="newEventVenue" type="text" placeholder="e.g. Main Auditorium"></div><div class="field full"><button class="admin-primary" type="submit" id="createEventBtn">ADD EVENT TO PROGRAMME →</button></div></form></section>
+    <section class="admin-card admin-section-hidden" id="eventsPanel" style="margin-top:17px">
+      <div class="admin-section-title"><h2>Manage events</h2><span class="admin-overline">ADMIN ONLY</span></div>
+      <p class="card-sub">Review the full programme and edit any event's date, time and stage / venue. Changes appear on the public website. Times are intentionally blank until confirmed.</p>
+      <div id="eventManagerList" class="event-manager-list"><p class="card-sub">Loading events…</p></div>
+      <div class="event-form-divider"></div>
+      <h2 id="eventFormHeading">Add a competition / programme</h2>
+      <p class="card-sub">Create a new event or select EDIT above to update an existing event. Competition type controls the scoring rules.</p>
+      <form id="eventForm" class="field-grid">
+        <input type="hidden" id="editingEventId">
+        <div class="field"><label for="newEventTitle">EVENT NAME *</label><input id="newEventTitle" type="text" required maxlength="140" placeholder="e.g. Classical Dance"></div>
+        <div class="field"><label for="newEventCategory">CATEGORY *</label><select id="newEventCategory"><option>Stage</option><option>Literary</option><option>Fine Arts</option><option>Other</option></select></div>
+        <div class="field"><label for="newEventType">COMPETITION TYPE *</label><select id="newEventType"><option value="individual">Individual</option><option value="group">Group</option><option value="programme">Programme (no points)</option></select></div>
+        <div class="field"><label for="newEventDate">DATE</label><input id="newEventDate" type="date"></div>
+        <div class="field"><label for="newEventTime">TIME / DURATION</label><input id="newEventTime" type="text" placeholder="Add start and end time when confirmed"></div>
+        <div class="field"><label for="newEventVenue">STAGE / VENUE / PLACE</label><input id="newEventVenue" type="text" placeholder="e.g. Stage 1, Stage 2 or Main Auditorium"></div>
+        <div class="field full"><button class="admin-primary" type="submit" id="createEventBtn">ADD EVENT TO PROGRAMME →</button> <button class="admin-secondary admin-section-hidden" type="button" id="cancelEventEditBtn">CANCEL EDIT</button></div>
+      </form>
+    </section>
   </main>
   <footer class="admin-footer">MGCSIILS CHERUVARAKONAM · AROHA ’26 · AUTHORISED ACCESS ONLY</footer>
   <div class="toast" id="adminToast" role="status" aria-live="polite"></div>
