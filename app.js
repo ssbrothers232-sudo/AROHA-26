@@ -51,8 +51,152 @@
       const person = r.event?.competition_type === 'group' ? (r.team_name || 'Winning team') : (r.winner_name || 'Winner');
       const points = awardPoints(r.event?.competition_type, Number(r.placement));
       const img = photoUrl(r.image_path);
-      return `<article class="winner-card"><div class="winner-image">${img ? `<img src="${esc(img)}" alt="${esc(person)}" loading="lazy" onerror="this.remove()">` : `<div class="initials">${esc(initials(person))}</div>`}</div><div class="winner-copy"><span class="winner-place">${placeName(Number(r.placement))}</span><h3>${esc(person)}</h3><span class="winner-event">${esc(r.event?.title || 'Competition')}</span><span class="winner-dept">${esc(r.department?.name || r.department_code)}</span><span class="winner-points">${points} POINT${points === 1 ? '' : 'S'} · ${r.event?.competition_type === 'group' ? 'GROUP' : 'INDIVIDUAL'}</span></div></article>`;
+      return `<article class="winner-card"><div class="winner-image">${img ? `<img src="${esc(img)}" alt="${esc(person)}" loading="lazy" onerror="this.remove()">` : `<div class="initials">${esc(initials(person))}</div>`}</div><div class="winner-copy"><span class="winner-place">${placeName(Number(r.placement))}</span><h3>${esc(person)}</h3><span class="winner-event">${esc(r.event?.title || 'Competition')}</span><span class="winner-dept">${esc(r.department?.name || r.department_code)}</span><span class="winner-points">${points} POINT${points === 1 ? '' : 'S'} · ${r.event?.competition_type === 'group' ? 'GROUP' : 'INDIVIDUAL'}</span><button type="button" class="winner-share" data-share-winner="${esc(r.id)}">↗ SHARE WINNER POST</button></div></article>`;
     }).join('') : '<div class="empty-state">Official winners will appear here as soon as stage-control results are published.</div>';
+  }
+
+  function drawCover(ctx, image, x, y, width, height) {
+    const scale = Math.max(width / image.width, height / image.height);
+    const sw = width / scale, sh = height / scale;
+    const sx = (image.width - sw) / 2, sy = (image.height - sh) / 2;
+    ctx.drawImage(image, sx, sy, sw, sh, x, y, width, height);
+  }
+
+  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
+    const words = String(text || '').split(/\\s+/);
+    let line = '', lines = [];
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line); line = word;
+      } else line = test;
+    }
+    if (line) lines.push(line);
+    if (lines.length > maxLines) {
+      lines = lines.slice(0, maxLines);
+      let last = lines[maxLines - 1];
+      while (ctx.measureText(last + '…').width > maxWidth && last.length > 3) last = last.slice(0, -1);
+      lines[maxLines - 1] = last + '…';
+    }
+    lines.forEach((value, index) => ctx.fillText(value, x, y + index * lineHeight));
+    return lines.length;
+  }
+
+  async function buildWinnerPost(result) {
+    const width = 1080, height = 1350;
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Your browser could not create the winner poster.');
+
+    const bg = ctx.createLinearGradient(0, 0, width, height);
+    bg.addColorStop(0, '#210811'); bg.addColorStop(.55, '#451b29'); bg.addColorStop(1, '#1d0710');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = 'rgba(222,185,112,.32)'; ctx.lineWidth = 2;
+    ctx.strokeRect(34, 34, width - 68, height - 68);
+    [160, 250, 390].forEach((radius, i) => {
+      ctx.beginPath(); ctx.arc(width - 80, 110, radius, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(70, height - 60, radius * .72, 0, Math.PI * 2); ctx.stroke();
+    });
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#e9ce91'; ctx.font = '600 29px Georgia, serif';
+    ctx.fillText('MGCSIILS CHERUVARAKONAM', width / 2, 94);
+    ctx.fillStyle = '#b9955d'; ctx.font = '700 17px Arial, sans-serif';
+    ctx.fillText('PRESENTS', width / 2, 130);
+    ctx.fillStyle = '#f1d99e'; ctx.font = '600 91px Georgia, serif';
+    ctx.fillText('AROHA ’26', width / 2, 226);
+    ctx.fillStyle = '#d9c19a'; ctx.font = '600 18px Arial, sans-serif';
+    ctx.fillText('THE ANNUAL ARTS FESTIVAL', width / 2, 270);
+
+    const photoX = 112, photoY = 315, photoW = 856, photoH = 510;
+    const gradient = ctx.createLinearGradient(photoX, photoY, photoX + photoW, photoY + photoH);
+    gradient.addColorStop(0, '#e6d0a7'); gradient.addColorStop(1, '#9c7047');
+    ctx.fillStyle = gradient; ctx.fillRect(photoX, photoY, photoW, photoH);
+
+    if (result.image_path) {
+      try {
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.src = photoUrl(result.image_path);
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = () => reject(new Error('Could not load winner photograph'));
+        });
+        ctx.save(); ctx.beginPath(); ctx.rect(photoX, photoY, photoW, photoH); ctx.clip();
+        drawCover(ctx, image, photoX, photoY, photoW, photoH);
+        ctx.restore();
+      } catch (error) {
+        ctx.fillStyle = '#351722'; ctx.font = '600 112px Georgia, serif';
+        ctx.fillText(initials(result.event?.competition_type === 'group' ? result.team_name : result.winner_name), width / 2, photoY + 285);
+      }
+    } else {
+      ctx.fillStyle = '#351722'; ctx.font = '600 112px Georgia, serif';
+      ctx.fillText(initials(result.event?.competition_type === 'group' ? result.team_name : result.winner_name), width / 2, photoY + 285);
+    }
+
+    const type = result.event?.competition_type || 'individual';
+    const person = type === 'group' ? (result.team_name || 'Winning team') : (result.winner_name || 'Winner');
+    const department = result.department?.name || result.department_code || 'Department';
+    const eventName = result.event?.title || 'Competition';
+    const points = awardPoints(type, Number(result.placement));
+    const place = placeName(Number(result.placement));
+
+    ctx.fillStyle = '#e8c77e'; ctx.fillRect(112, 856, 856, 4);
+    ctx.fillStyle = '#f1d99e'; ctx.font = '700 24px Arial, sans-serif';
+    ctx.fillText(place, width / 2, 922);
+    ctx.fillStyle = '#fff3db';
+    const nameFont = person.length > 26 ? 48 : person.length > 18 ? 58 : 70;
+    ctx.font = `600 ${nameFont}px Georgia, serif`;
+    wrapCanvasText(ctx, person, width / 2, 1000, 880, nameFont + 12, 2);
+
+    ctx.fillStyle = '#e0c18b'; ctx.font = '700 30px Arial, sans-serif';
+    ctx.fillText(department.toUpperCase(), width / 2, 1100);
+    ctx.fillStyle = '#e7d6bd'; ctx.font = '500 24px Arial, sans-serif';
+    wrapCanvasText(ctx, eventName.toUpperCase(), width / 2, 1150, 870, 31, 2);
+    ctx.fillStyle = '#30121b'; ctx.fillRect(390, 1210, 300, 66);
+    ctx.fillStyle = '#f2d69b'; ctx.font = '700 27px Arial, sans-serif';
+    ctx.fillText(`${points} POINT${points === 1 ? '' : 'S'} · ${type.toUpperCase()}`, width / 2, 1252);
+    ctx.fillStyle = '#d5bb8e'; ctx.font = '600 17px Arial, sans-serif';
+    ctx.fillText('THE ART OF BEING ALIVE · AROHA ’26', width / 2, 1310);
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('The winner poster could not be exported.');
+    const safeName = person.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'winner';
+    return new File([blob], `aroha-26-${safeName}-winner.png`, {type:'image/png'});
+  }
+
+  async function shareWinnerPost(resultId, button) {
+    const result = results.find(item => item.id === resultId);
+    if (!result) return;
+    const original = button.textContent;
+    button.disabled = true; button.textContent = 'PREPARING POST…';
+    try {
+      const file = await buildWinnerPost(result);
+      const shareData = {
+        files: [file],
+        title: `AROHA ’26 · ${result.winner_name || result.team_name || 'Winner'}`,
+        text: `${placeName(Number(result.placement))} · ${result.event?.title || 'AROHA competition'} · ${result.department?.name || result.department_code} · AROHA ’26`
+      };
+      if (navigator.canShare && navigator.canShare({files:[file]}) && navigator.share) {
+        await navigator.share(shareData);
+        toast('Winner post shared.');
+      } else {
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url; link.download = file.name; document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        toast('Winner poster downloaded. You can share it on WhatsApp or Instagram.');
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('AROHA winner share:', error);
+        toast(error.message || 'Could not create the winner post.');
+      }
+    } finally {
+      button.disabled = false; button.textContent = original;
+    }
   }
 
   function renderScores() {
@@ -123,6 +267,10 @@
   });
   $('winnerDepartment').addEventListener('change', renderWinners);
   $('winnerType').addEventListener('change', renderWinners);
+  $('winnerGrid').addEventListener('click', e => {
+    const button = e.target.closest('[data-share-winner]');
+    if (button) shareWinnerPost(button.dataset.shareWinner, button);
+  });
   $('menuToggle').addEventListener('click', () => { const open = $('mainNav').classList.toggle('open'); $('menuToggle').setAttribute('aria-expanded', String(open)); });
   document.querySelectorAll('#mainNav a').forEach(a => a.addEventListener('click', () => $('mainNav').classList.remove('open')));
   $('lightboxClose').addEventListener('click', () => { $('lightbox').classList.remove('open'); $('lightbox').setAttribute('aria-hidden','true'); $('lightboxImage').src=''; });
