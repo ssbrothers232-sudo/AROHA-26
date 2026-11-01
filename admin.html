@@ -5,8 +5,10 @@
   <title>Stage Control | AROHA ’26</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=share-post-admin-2">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="admin.js?v=share-post-admin-2" defer></script>
+  <link rel="stylesheet" href="styles.css?v=aroha-reports-1">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script><script src="config.js"></script><script src="admin.js?v=aroha-reports-1" defer></script>
 </head>
 <body class="admin-body">
   <header class="admin-topbar"><a class="admin-brand" href="index.html"><span class="admin-brand-mark">M</span><span class="admin-brand-copy"><strong>AROHA ’26</strong><small>MGCSIILS · STAGE CONTROL</small></span></a><div class="admin-top-actions"><span id="adminUser" class="admin-user"></span><a href="index.html" class="admin-back">← PUBLIC WEBSITE</a><button id="logoutBtn" class="admin-logout admin-section-hidden">LOG OUT</button></div></header>
@@ -21,6 +23,19 @@
     <div class="admin-heading"><div><div class="admin-overline">AROHA ’26 · RESULTS OPERATIONS</div><h1>Control Room.</h1><p>Submit verified results. Department scores and the public winners board update automatically.</p></div><div class="admin-overline" id="roleBadge">STAGE CONTROL</div></div>
     <div id="adminAlert" class="admin-alert admin-section-hidden" role="status"></div>
     <section class="admin-stats"><div class="admin-stat"><strong id="statResults">0</strong><span>PUBLISHED RESULTS</span></div><div class="admin-stat"><strong id="statEvents">0</strong><span>COMPETITIONS</span></div><div class="admin-stat"><strong id="statPhotos">0</strong><span>GALLERY PHOTOS</span></div><div class="admin-stat"><strong>05</strong><span>DEPARTMENTS</span></div></section>
+
+    <div class="admin-tools-grid">
+      <section class="admin-card admin-section-hidden" id="reportToolsPanel">
+        <div class="admin-section-title"><h2>Festival reports</h2><span class="admin-overline">ADMIN ONLY</span></div>
+        <p class="card-sub">Download an Excel workbook with department scores, all winners and the event schedule, or create a print-ready PDF report.</p>
+        <div class="admin-report-actions"><button type="button" class="admin-primary" id="exportExcelBtn">DOWNLOAD EXCEL REPORT ↓</button><button type="button" class="admin-secondary" id="exportPdfBtn">DOWNLOAD PDF REPORT ↓</button></div>
+      </section>
+      <section class="admin-card admin-section-hidden" id="championshipControlPanel">
+        <div class="admin-section-title"><h2>Championship finale</h2><span class="admin-overline">ADMIN ONLY</span></div>
+        <p class="card-sub" id="championshipControlStatus">The official overall champion is locked until final verification.</p>
+        <button type="button" class="admin-primary" id="toggleChampionshipRevealBtn">REVEAL FINAL CHAMPION →</button>
+      </section>
+    </div>
 
     <div class="admin-tab-row" id="adminTabs"><button class="active" data-tab="resultsPanel">ADD / UPDATE RESULT</button><button data-tab="galleryPanel">UPLOAD GALLERY</button><button data-tab="eventsPanel" id="eventsTab" class="admin-section-hidden">MANAGE EVENTS</button></div>
     <div class="admin-grid" id="resultsLayout">
