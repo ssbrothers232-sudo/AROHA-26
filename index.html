@@ -9,11 +9,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=winner-share-1">
+  <link rel="stylesheet" href="styles.css?v=aroha-features-1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="config.js"></script>
   <script src="data.js" defer></script>
-  <script src="app.js?v=winner-share-2" defer></script>
+  <script src="app.js?v=aroha-features-1" defer></script>
 </head>
 <body class="public-site">
   <div class="topline"><span class="topline-mark">✦</span> MGCSIILS CHERUVARAKONAM <span class="topline-divider">/</span> THE ANNUAL ARTS FESTIVAL <span class="topline-mark">✦</span></div>
@@ -46,6 +47,14 @@
       <div class="hero-bottom"><span>SCROLL TO EXPERIENCE</span><span class="scroll-indicator"></span><span>CHERUVARAKONAM · KERALA</span></div>
     </section>
 
+
+    <section class="countdown-strip" aria-label="Countdown to AROHA 2026">
+      <div class="countdown-copy"><span class="countdown-kicker">THE FIRST SPOTLIGHT IS ALMOST HERE</span><strong id="countdownHeadline">COUNTING DOWN TO AROHA ’26</strong><small id="countdownSubline">MGCSIILS CHERUVARAKONAM · 5 NOVEMBER 2026</small></div>
+      <div class="countdown-clock" id="countdownClock">
+        <div><strong id="countDays">00</strong><span>DAYS</span></div><i>:</i><div><strong id="countHours">00</strong><span>HOURS</span></div><i>:</i><div><strong id="countMinutes">00</strong><span>MINUTES</span></div><i>:</i><div><strong id="countSeconds">00</strong><span>SECONDS</span></div>
+      </div>
+    </section>
+
     <div class="ribbon"><span>ARTISTRY</span><b>✦</b><span>UNITY</span><b>✦</b><span>EXPRESSION</span><b>✦</b><span>EXCELLENCE</span><b>✦</b><span>ARTISTRY</span></div>
 
     <section class="about-section section-pad" id="about">
@@ -72,7 +81,7 @@
       <div class="section-overline light-overline"><span>04</span><i></i> THE DEPARTMENT CHALLENGE</div>
       <div class="section-heading-row"><h2 class="editorial-title light-title">One crown.<br><em>Five contenders.</em></h2><p class="section-lead">Points are calculated automatically from published results. Every podium finish moves the scoreboard.</p></div>
       <div class="scoring-note"><span>INDIVIDUAL</span><b>1ST · 5 PTS</b><b>2ND · 3 PTS</b><b>3RD · 1 PT</b><i></i><span>GROUP</span><b>1ST · 10 PTS</b><b>2ND · 7 PTS</b><b>3RD · 2 PTS</b></div>
-      <div class="scoreboard-layout"><div class="champion-panel" id="championPanel"><div class="champion-star">✦</div><span>OVERALL CHAMPIONS</span><strong id="championName">TO BE DECIDED</strong><small>THE AROHA ’26 TITLE</small></div><div class="score-table-wrap"><div class="score-table-title"><strong>DEPARTMENT STANDINGS</strong><span>LIVE RESULTS</span></div><div id="scoreTable" class="score-table"><div class="score-table-head"><span>RANK</span><span>DEPARTMENT</span><span>G</span><span>S</span><span>B</span><span>POINTS</span></div></div><p class="score-footnote">G Gold · S Silver · B Bronze. Scores reflect published results only.</p></div></div>
+      <div class="scoreboard-layout"><div class="champion-panel" id="championPanel"><div class="champion-star">✦</div><span>OVERALL CHAMPIONS</span><strong id="championName">TO BE DECIDED</strong><small>THE AROHA ’26 TITLE</small></div><div class="score-table-wrap"><div class="score-table-title"><strong>DEPARTMENT STANDINGS</strong><span>LIVE RESULTS</span></div><div id="scoreTable" class="score-table"><div class="score-table-head"><span>RANK</span><span>DEPARTMENT</span><span>G</span><span>S</span><span>B</span><span>POINTS</span></div></div><div class="championship-race"><div class="race-heading"><strong>THE CHAMPIONSHIP RACE</strong><span>LIVE POINT TRACKER</span></div><div id="championshipRace" class="race-bars"><p class="score-footnote">Live department positions will appear here.</p></div></div><p class="score-footnote">G Gold · S Silver · B Bronze. Scores reflect published results only.</p></div></div>
     </section>
 
     <section class="gallery-section section-pad" id="gallery">
@@ -81,7 +90,12 @@
       <div class="gallery-grid" id="galleryGrid"><div class="empty-state">AROHA photographs will appear here.</div></div>
     </section>
 
-    <section class="finale-section"><div class="finale-ornament">❧</div><p>MGCSIILS CHERUVARAKONAM</p><h2>THE STAGE MAY FALL SILENT.<br><em>THE ART WILL REMAIN.</em></h2><span>AROHA ’26 · THE ANNUAL ARTS FESTIVAL</span><a href="#top" class="back-top">RETURN TO THE BEGINNING ↑</a></section>
+    <section class="finale-section championship-finale" id="championshipFinale">
+      <div class="finale-ornament">❧</div><p>MGCSIILS CHERUVARAKONAM</p>
+      <div id="finaleLocked"><span class="finale-lock-mark">✦</span><h2>THE CROWN IS<br><em>STILL IN PLAY.</em></h2><span>THE OVERALL CHAMPION WILL BE REVEALED AFTER FINAL VERIFICATION.</span></div>
+      <div id="finaleRevealed" class="finale-revealed" hidden><span class="finale-trophy" aria-hidden="true">🏆</span><span class="finale-winner-kicker">THE OFFICIAL OVERALL CHAMPIONS</span><h2 id="finaleChampionNames">BBA</h2><p class="finale-winner-points"><strong id="finaleChampionPoints">0</strong> POINTS</p><div class="finale-medals" id="finaleChampionMedals"></div><span class="finale-winner-caption">THE AROHA ’26 TITLE · MGCSIILS CHERUVARAKONAM</span></div>
+      <span class="finale-footer-line">AROHA ’26 · THE ANNUAL ARTS FESTIVAL</span><a href="#top" class="back-top">RETURN TO THE BEGINNING ↑</a>
+    </section>
   </main>
 
   <footer class="site-footer"><a class="institution footer-institution" href="#top"><span class="institution-seal">M</span><span><strong>MGCSIILS</strong><small>CHERUVARAKONAM</small></span></a><span>MADE OF MANY TALENTS. UNITED BY AROHA.</span><a href="admin.html" class="footer-control">♙ STAGE CONTROL LOGIN</a></footer>
