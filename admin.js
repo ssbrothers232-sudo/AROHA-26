@@ -5,7 +5,7 @@
   const cfg = window.AROHA_CONFIG || {};
   const configured = Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey && !cfg.supabaseUrl.includes('YOUR-PROJECT') && !cfg.supabaseAnonKey.includes('YOUR_'));
   const db = configured && window.supabase?.createClient ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
-  let currentUser = null, currentRole = null, departments = [], events = [], results = [], toastTimer;
+  let currentUser = null, currentRole = null, departments = [], events = [], results = [], departmentScores = [], festivalSettings = null, festivalSettingsAvailable = false, toastTimer;
   const placePoints = (type, place) => type === 'group' ? ({1:10,2:7,3:2}[place] || 0) : ({1:5,2:3,3:1}[place] || 0);
   const roleAllowed = () => ['admin','stage_control'].includes(currentRole);
 
@@ -84,17 +84,26 @@
     const [d,e,r,s,g] = await Promise.all([
       db.from('departments').select('code,name,display_order').order('display_order'),
       db.from('events').select('id,title,category,competition_type,event_date,event_time,venue,is_published').order('created_at',{ascending:false}),
-      db.from('results').select('id,event_id,department_code,placement,winner_name,team_name,team_members,image_path,notes,created_at,event:events(title,competition_type),department:departments(name)').order('created_at',{ascending:false}),
+      db.from('results').select('id,event_id,department_code,placement,winner_name,team_name,team_members,image_path,notes,created_at,event:events(title,competition_type,event_date,event_time,venue),department:departments(name)').order('created_at',{ascending:false}),
       db.from('department_scoreboard').select('code,name,display_order,gold,silver,bronze,points'),
       db.from('gallery_items').select('id').eq('is_published',true)
     ]);
     const errors = [d,e,r,s,g].filter(x => x.error);
     if (errors.length) throw errors[0].error;
     departments = d.data || []; events = e.data || []; results = r.data || [];
-    populateSelects(); renderScoreboard(s.data || []); renderRecentResults();
+    departmentScores = s.data || [];
+    populateSelects(); renderScoreboard(departmentScores); renderRecentResults();
     $('statResults').textContent = results.filter(x=>x.is_published !== false).length;
     $('statPhotos').textContent = g.data?.length || 0;
     renderEventManager();
+    try {
+      const settingResult = await db.from('festival_settings').select('championship_revealed,champion_departments,champion_points,champion_gold,champion_silver,champion_bronze').eq('singleton',true).maybeSingle();
+      festivalSettingsAvailable = !settingResult.error && Boolean(settingResult.data);
+      festivalSettings = festivalSettingsAvailable ? settingResult.data : null;
+    } catch (error) {
+      festivalSettingsAvailable = false; festivalSettings = null;
+    }
+    renderChampionshipControl();
   }
   function renderScoreboard(scores) {
     const sorted = [...scores].sort((a,b)=>Number(b.points)-Number(a.points)||Number(b.gold)-Number(a.gold)||Number(b.silver)-Number(a.silver));
@@ -328,6 +337,154 @@
     }
   }
 
+
+  function sortedDepartmentScores() {
+    return [...departmentScores].sort((a,b) => Number(b.points)-Number(a.points) || Number(b.gold)-Number(a.gold) || Number(b.silver)-Number(a.silver) || Number(b.bronze)-Number(a.bronze) || Number(a.display_order)-Number(b.display_order));
+  }
+
+  function renderChampionshipControl() {
+    const status = $('championshipControlStatus');
+    const button = $('toggleChampionshipRevealBtn');
+    if (!status || !button) return;
+    if (!festivalSettingsAvailable) {
+      status.textContent = 'Run supabase/add-festival-features.sql in Supabase SQL Editor to activate the official reveal control.';
+      button.textContent = 'MIGRATION REQUIRED';
+      button.disabled = true;
+      return;
+    }
+    button.disabled = false;
+    if (festivalSettings?.championship_revealed) {
+      const names = (festivalSettings.champion_departments || []).map(code => departments.find(item => item.code === code)?.name || code);
+      status.textContent = `Official reveal is LIVE: ${names.join(' · ') || 'Champion'} · ${Number(festivalSettings.champion_points)||0} points.`;
+      button.textContent = 'LOCK CHAMPIONSHIP REVEAL';
+    } else {
+      status.textContent = 'The public finale is locked. Verify every result before revealing the official champion.';
+      button.textContent = 'REVEAL FINAL CHAMPION →';
+    }
+  }
+
+  async function toggleChampionshipReveal() {
+    if (currentRole !== 'admin') return;
+    if (!festivalSettingsAvailable) {
+      notice('adminAlert','Run supabase/add-festival-features.sql in Supabase SQL Editor first.','error');
+      return;
+    }
+    const isCurrentlyRevealed = Boolean(festivalSettings?.championship_revealed);
+    let update;
+    if (isCurrentlyRevealed) {
+      if (!window.confirm('Lock the public championship reveal again? The trophy announcement will return to its locked state.')) return;
+      update = {championship_revealed:false,champion_departments:[],champion_points:0,champion_gold:0,champion_silver:0,champion_bronze:0,updated_at:new Date().toISOString(),updated_by:currentUser.id};
+    } else {
+      const ranked = sortedDepartmentScores().filter(item => Number(item.points) > 0);
+      if (!ranked.length) {
+        notice('adminAlert','No published points are available yet. Enter and verify the results before revealing the champion.','error');
+        return;
+      }
+      const leader = ranked[0];
+      const tied = ranked.filter(item => Number(item.points)===Number(leader.points) && Number(item.gold)===Number(leader.gold) && Number(item.silver)===Number(leader.silver) && Number(item.bronze)===Number(leader.bronze));
+      const names = tied.map(item=>item.name).join(' · ');
+      if (!window.confirm(`Reveal ${names} as the official AROHA ’26 champion${tied.length>1?'s':''} with ${Number(leader.points)} points? Please confirm that all results have been checked.`)) return;
+      update = {championship_revealed:true,champion_departments:tied.map(item=>item.code),champion_points:Number(leader.points)||0,champion_gold:Number(leader.gold)||0,champion_silver:Number(leader.silver)||0,champion_bronze:Number(leader.bronze)||0,updated_at:new Date().toISOString(),updated_by:currentUser.id};
+    }
+    const button=$('toggleChampionshipRevealBtn');
+    button.disabled=true; button.textContent='UPDATING…';
+    try {
+      const {error}=await db.from('festival_settings').update(update).eq('singleton',true);
+      if(error) throw error;
+      await loadData();
+      notice('adminAlert',update.championship_revealed?'The official champion has been revealed on the public AROHA website.':'The public championship reveal has been locked again.','success');
+      toast(update.championship_revealed?'Championship revealed.':'Championship reveal locked.');
+    } catch(error) {
+      notice('adminAlert',error.message || 'Could not update the championship reveal.','error');
+    } finally {
+      button.disabled=false;
+      renderChampionshipControl();
+    }
+  }
+
+  function reportWinnersRows() {
+    return results.map(result => {
+      const type=result.event?.competition_type || 'individual';
+      return {
+        Event:result.event?.title || '',
+        Date:result.event?.event_date || '',
+        Time:result.event?.event_time || '',
+        Type:type,
+        Position:({1:'1st',2:'2nd',3:'3rd'}[result.placement] || ''),
+        Department:result.department?.name || result.department_code,
+        WinnerOrTeam:type==='group'?(result.team_name || ''):(result.winner_name || ''),
+        TeamMembers:(result.team_members || []).join('; '),
+        Points:placePoints(type,Number(result.placement)),
+        Notes:result.notes || ''
+      };
+    });
+  }
+
+  function downloadTextFile(content,filename,mime) {
+    const blob=new Blob([content],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a'); link.href=url; link.download=filename;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
+
+  function exportExcelReport() {
+    if (currentRole!=='admin') return;
+    if (!window.XLSX) {
+      notice('adminAlert','The Excel export library did not load. Refresh the portal and try again.','error');
+      return;
+    }
+    const workbook=window.XLSX.utils.book_new();
+    const ranked=sortedDepartmentScores();
+    const scoreRows=[['Rank','Department','Gold','Silver','Bronze','Points'],...ranked.map((d,i)=>[i+1,d.name,Number(d.gold)||0,Number(d.silver)||0,Number(d.bronze)||0,Number(d.points)||0])];
+    const eventRows=[['Event','Category','Type','Date','Time','Stage / Venue'],...events.map(event=>[event.title,event.category,event.competition_type,event.event_date||'',event.event_time||'',event.venue||''])];
+    const winnerObjects=reportWinnersRows();
+    const winnerRows=[Object.keys(winnerObjects[0] || {Event:'',Date:'',Time:'',Type:'',Position:'',Department:'',WinnerOrTeam:'',TeamMembers:'',Points:'',Notes:''}),...winnerObjects.map(row=>Object.values(row))];
+    const scoreSheet=window.XLSX.utils.aoa_to_sheet(scoreRows);
+    const eventSheet=window.XLSX.utils.aoa_to_sheet(eventRows);
+    const winnerSheet=window.XLSX.utils.aoa_to_sheet(winnerRows);
+    scoreSheet['!cols']=[{wch:8},{wch:22},{wch:10},{wch:10},{wch:10},{wch:12}];
+    eventSheet['!cols']=[{wch:34},{wch:16},{wch:16},{wch:14},{wch:22},{wch:24}];
+    winnerSheet['!cols']=[{wch:30},{wch:14},{wch:22},{wch:14},{wch:12},{wch:18},{wch:28},{wch:42},{wch:10},{wch:30}];
+    window.XLSX.utils.book_append_sheet(workbook,scoreSheet,'Department Scores');
+    window.XLSX.utils.book_append_sheet(workbook,winnerSheet,'Winners');
+    window.XLSX.utils.book_append_sheet(workbook,eventSheet,'Event Schedule');
+    window.XLSX.writeFile(workbook,'AROHA-26-Results-Report.xlsx');
+    toast('Excel report downloaded.');
+  }
+
+  function exportPdfReport() {
+    if (currentRole!=='admin') return;
+    const JsPDF=window.jspdf?.jsPDF;
+    if(!JsPDF) {
+      notice('adminAlert','The PDF export library did not load. Refresh the portal and try again.','error');
+      return;
+    }
+    const pdf=new JsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const pageWidth=210, pageHeight=297, margin=14;
+    let y=17;
+    const addLine=(text,opts={})=>{
+      const size=opts.size||8, color=opts.color||[55,28,35], bold=Boolean(opts.bold);
+      pdf.setFont('helvetica',bold?'bold':'normal'); pdf.setFontSize(size); pdf.setTextColor(...color);
+      const lines=pdf.splitTextToSize(String(text??''),pageWidth-margin*2);
+      const lineHeight=size*0.42+1.2;
+      if(y+lines.length*lineHeight>pageHeight-margin){pdf.addPage();y=18;}
+      pdf.text(lines,margin,y);
+      y+=lines.length*lineHeight+(opts.gap??2);
+    };
+    addLine('MGCSIILS CHERUVARAKONAM', {size:10,bold:true,color:[151,105,49],gap:2});
+    addLine("AROHA '26 · FESTIVAL RESULTS REPORT", {size:18,bold:true,color:[54,19,31],gap:2});
+    addLine(`Generated: ${new Date().toLocaleString('en-IN')}`,{size:8,color:[120,100,84],gap:7});
+    addLine('DEPARTMENT CHAMPIONSHIP', {size:11,bold:true,color:[151,105,49],gap:3});
+    sortedDepartmentScores().forEach((d,i)=>addLine(`${i+1}. ${d.name} — ${Number(d.points)||0} points | Gold: ${Number(d.gold)||0} | Silver: ${Number(d.silver)||0} | Bronze: ${Number(d.bronze)||0}`,{size:8,gap:1}));
+    y+=4; addLine('EVENT SCHEDULE', {size:11,bold:true,color:[151,105,49],gap:3});
+    [...events].sort((a,b)=>String(a.event_date||'').localeCompare(String(b.event_date||''))||a.title.localeCompare(b.title)).forEach(event=>addLine(`${event.event_date||'Date TBA'} · ${event.title} · ${event.event_time||'Time TBA'} · ${event.venue||'Venue TBA'} · ${event.competition_type}`,{size:7,gap:1}));
+    y+=4; addLine('PUBLISHED WINNERS', {size:11,bold:true,color:[151,105,49],gap:3});
+    reportWinnersRows().forEach(row=>addLine(`${row.Event} · ${row.Position} · ${row.WinnerOrTeam} · ${row.Department} · ${row.Points} points · ${row.Type}`,{size:7,gap:1}));
+    pdf.save('AROHA-26-Results-Report.pdf');
+    toast('PDF report downloaded.');
+  }
+
   async function checkSession(session) {
     currentUser = session?.user || null;
     if (!currentUser) {
@@ -343,6 +500,8 @@
     }
     currentRole = roleRow.role; $('roleBadge').textContent = currentRole === 'admin' ? 'ADMINISTRATOR' : 'STAGE CONTROL';
     $('eventsTab').classList.toggle('admin-section-hidden', currentRole !== 'admin');
+    $('reportToolsPanel').classList.toggle('admin-section-hidden', currentRole !== 'admin');
+    $('championshipControlPanel').classList.toggle('admin-section-hidden', currentRole !== 'admin');
     try { await loadData(); } catch (e) { notice('adminAlert', `Could not load portal data: ${e.message || e}`, 'error'); }
   }
 
@@ -358,6 +517,9 @@
   $('eventSelect').addEventListener('change', refreshTypeFields);
   document.querySelectorAll('input[name="placement"]').forEach(r => r.addEventListener('change',refreshPoints));
   $('cancelEditBtn').addEventListener('click', resetResultForm);
+  $('toggleChampionshipRevealBtn').addEventListener('click', toggleChampionshipReveal);
+  $('exportExcelBtn').addEventListener('click', exportExcelReport);
+  $('exportPdfBtn').addEventListener('click', exportPdfReport);
 
   $('resultForm').addEventListener('submit', async e => {
     e.preventDefault(); if (!roleAllowed()) return;
