@@ -19,3 +19,5 @@
 
 /* AROHA winner poster share action */
 .winner-share{margin-top:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #b99156;background:#f2e5ca;color:#45202b;padding:10px 12px;font-size:8px;font-weight:900;letter-spacing:.12em;cursor:pointer;transition:background .2s,color .2s,border-color .2s}.winner-share:hover{background:#3b1723;color:#f4dfb2;border-color:#3b1723}.winner-share:disabled{opacity:.6;cursor:wait}.winner-copy{align-items:flex-start}.winner-card{grid-template-columns:116px minmax(0,1fr)}@media(max-width:650px){.winner-share{font-size:8px;padding:10px 11px}}
+
+.result-actions [data-share-result]{border:1px solid #b99156;background:#f2e5ca;color:#45202b}.result-actions [data-share-result]:hover{background:#3b1723;color:#f4dfb2}.result-actions button:disabled{opacity:.55;cursor:wait}
