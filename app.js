@@ -63,7 +63,7 @@
   }
 
   function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
-    const words = String(text || '').split(/\\s+/);
+    const words = String(text || '').split(/\s+/);
     let line = '', lines = [];
     for (const word of words) {
       const test = line ? line + ' ' + word : word;
